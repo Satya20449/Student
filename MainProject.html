@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Student Feedback System</title>
+
+<style>
+body{
+  font-family: Arial, sans-serif;
+  background:#0f172a;
+  color:white;
+  padding:20px;
+}
+.container{
+  max-width:420px;
+  margin:auto;
+}
+.card{
+  background:#1e293b;
+  padding:15px;
+  margin-bottom:15px;
+  border-radius:12px;
+  transition:transform 0.3s ease, box-shadow 0.3s ease;
+}
+.card:hover{
+  transform:translateY(-6px);
+  box-shadow:0 10px 20px rgba(0,0,0,0.5);
+}
+input, textarea, button{
+  width:100%;
+  padding:8px;
+  margin-top:6px;
+  border-radius:6px;
+  border:none;
+}
+button{
+  background:#06b6d4;
+  font-weight:bold;
+  cursor:pointer;
+}
+.star{
+  font-size:22px;
+  cursor:pointer;
+  color:gray;
+}
+.star.active{ color:gold; }
+</style>
+</head>
+
+<body>
+
+<h2 style="text-align:center">Student Feedback System</h2>
+
+<div class="container">
+
+<!-- FORM -->
+<div class="card">
+<h3>Submit Feedback</h3>
+
+<input type="text" id="studentName" placeholder="Student Name">
+<input type="text" id="course" placeholder="Course">
+
+<div id="stars"></div>
+
+<textarea id="comment" rows="3" placeholder="Comment"></textarea>
+
+<button onclick="submitFeedback()">Submit</button>
+</div>
+
+<!-- RECORDS -->
+<div class="card">
+<h3>Feedback Records</h3>
+<div id="records">No feedback yet</div>
+</div>
+
+<!-- SUMMARY -->
+<div class="card">
+<h3>Summary</h3>
+<p id="summary">No data</p>
+<button onclick="resetAll()" style="margin-top:8px;background:#ef4444;color:white">
+  Reset All Feedback
+</button>
+
+</div>
+
+</div>
+<script>
+const DB_KEY = "student_feedback_data";
+let currentRating = 0;
+
+/* create stars */
+const starBox = document.getElementById("stars");
+for(let i=1;i<=10;i++){
+  const star = document.createElement("span");
+  star.innerText = "★";
+  star.className = "star";
+  star.onclick = () => setRating(i);
+  starBox.appendChild(star);
+}
+
+function setRating(value){
+  currentRating = value;
+  document.querySelectorAll(".star").forEach((s,i)=>{
+    s.classList.toggle("active", i < value);
+  });
+}
+
+/* submit feedback */
+function submitFeedback(){
+  const name = studentName.value.trim();
+  const course = document.getElementById("course").value.trim();
+  const comment = document.getElementById("comment").value.trim();
+
+  if(name === "" || currentRating === 0){
+    alert("Please enter student name and select rating");
+    return;
+  }
+
+  const feedback = {
+    id: Date.now(),
+    name,
+    course,
+    comment,
+    rating: currentRating
+  };
+
+  const list = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+  list.push(feedback);
+  localStorage.setItem(DB_KEY, JSON.stringify(list));
+
+  studentName.value = course.value = comment.value = "";
+  setRating(0);
+
+  render(list);
+}
+
+/* render records */
+function render(list){
+  const records = document.getElementById("records");
+  records.innerHTML = "";
+  let total = 0;
+
+  list.forEach(item=>{
+    total += item.rating;
+    records.innerHTML += `
+      <div style="margin-bottom:6px">
+        <b>${item.name}</b> (${item.rating}/10) - ${item.course}
+        <button onclick="deleteOne(${item.id})"
+          style="margin-left:8px;background:#f87171;border:none;border-radius:4px;cursor:pointer">
+          Delete
+        </button>
+      </div>`;
+  });
+
+  document.getElementById("summary").innerText =
+    list.length
+    ? `Average Rating: ${(total/list.length).toFixed(1)} / 10 (${list.length} students)`
+    : "No data";
+}
+
+/* delete one record */
+function deleteOne(id){
+  let list = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+  list = list.filter(item => item.id !== id);
+  localStorage.setItem(DB_KEY, JSON.stringify(list));
+  render(list);
+}
+
+/* reset all */
+function resetAll(){
+  if(confirm("Are you sure you want to delete all feedback?")){
+    localStorage.removeItem(DB_KEY);
+    document.getElementById("records").innerText = "No feedback yet";
+    document.getElementById("summary").innerText = "No data";
+  }
+}
+
+/* export */
+function exportJSON(){
+  const data = localStorage.getItem(DB_KEY) || "[]";
+  const blob = new Blob([data], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "feedback.json";
+  a.click();
+}
+
+/* load data on start */
+const saved = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+if(saved.length) render(saved);
+</script>
+
+
+</body>
+</html>
